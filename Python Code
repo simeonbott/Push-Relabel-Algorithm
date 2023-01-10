@@ -1,0 +1,117 @@
+#define a class for the nodes in the network. This will hold network information about their position, neighbours and variables for use during the algorithm.
+class Network:
+    def __init__(self, source, sink, neighbours, residual_capacity):
+        self.flow = source
+        self.sink = sink
+        self.excess = max(0,source - sink)
+        self.neighbours = neighbours
+        self.degree = len(neighbours)
+        self.arc_flow = [0]*self.degree
+        self.arc_capacity = residual_capacity
+        self.label = 0
+        
+#assume s,t are well-formatted. N.B. nodeID = 0 usually won't exist but code can support it.
+s = [1, 1, 1, 2, 3, 4,5,5,5,5,5,5,  6, 6,7,8,3,1] #input value
+t = [2, 3, 4, 3, 4, 5,6,7,8,9,10,11,10,9,11,9,9,11] #input value
+
+source = [0,17,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] #input value
+sink = [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] #input value
+edge_capacity = [5]*18 #input value
+limit = 100 #input value
+
+#When the first item of the queue cannot be pushed, relabel it.
+def Relabel(node,current_neighbour,Queue):
+    N[node].label += 1
+    node = Queue[0].pop(0)
+    if not len(Queue) == 1:
+        Queue[1].insert(0,node)
+    #print("Queue is: ", Queue)
+    Queue = maintainQueue(Queue)
+    if Queue:
+        node = Queue[0][0]
+        current_neighbour = 0
+    return node,current_neighbour,Queue
+    
+#Route flow from 'node' to 'target_node'.
+def Push(node,current_neighbour,target_node):
+    Amount = min(N[node].excess,N[node].arc_capacity[current_neighbour] - N[node].arc_flow[current_neighbour])
+    #print(Amount)
+    N[node].flow -= Amount
+    N[target_node].flow += Amount
+    N[node].excess = max(0,N[node].flow - N[node].sink)
+    N[target_node].excess = max(0,N[target_node].flow - N[target_node].sink)
+    N[node].arc_flow[current_neighbour] += Amount
+    N[target_node].arc_flow[N[target_node].neighbours.index(node)] -= Amount
+    return
+        
+#Runs directly after a 'Push' to make sure the Queue is correctly formatted. It is essential that the Queue maintain nodes with excess supply in labelled order.
+def AfterPush(node,current_neighbour,Queue,target_node):
+    if N[node].excess == 0:
+        node = Queue[0].pop(0)
+    if N[target_node].excess > 0:
+        Queue.insert(0,[target_node])
+    Queue = maintainQueue(Queue)
+    if not Queue:
+        return node,current_neighbour,Queue
+    if node != Queue[0][0]:
+        node = Queue[0][0]
+        current_neighbour = 0
+    return node,current_neighbour,Queue
+
+#Removes empty values from the front of the Queue. The Queue is setup to keep empty values at the back up to the limit value.
+def maintainQueue(Queue):
+    if Queue:
+        if not Queue[0]:
+            Queue.pop(0)
+            Queue = maintainQueue(Queue)
+    return Queue
+
+#Decides whether to increase 'current neighbour', push(node - > target_node), or relabel(node).
+def PushRelabelMain(node,current_neighbour, Queue):
+    if current_neighbour > N[node].degree - 1:
+        current_neighbour = 0
+        node,current_neighbour,Queue = Relabel(node,current_neighbour,Queue)
+    else:
+        target_node = N[node].neighbours[current_neighbour]
+        if N[node].label == N[target_node].label + 1:
+            if N[node].arc_capacity[current_neighbour] - N[node].arc_flow[current_neighbour] > 0:
+                Push(node,current_neighbour,target_node)
+                node,current_neighbour,Queue = AfterPush(node,current_neighbour,Queue,target_node)
+            else:
+                current_neighbour += 1
+        else:
+            current_neighbour += 1
+    return node, current_neighbour, Queue
+
+Runs 
+def PushRelabel(limit,number_nodes):
+#setting up the remaining variables. These variables are indexed: [nodeID][neighbour_number], rather than [nodeID][neighbourID].
+    number_nodes = max(max(s),max(t)) + 1
+    number_edges = len(s)
+    neighbours_network = []
+    residual_network = []
+    for i in range(number_nodes):
+        neighbours = []
+        residual_capacity = []
+        for j in range(number_edges):
+            if s[j] == i:
+                neighbours.append(t[j])
+                residual_capacity.append(edge_capacity[j])
+            if t[j] == i:
+                neighbours.append(s[j])
+                residual_capacity.append(edge_capacity[j])
+        neighbours_network.append(neighbours)
+        residual_network.append(residual_capacity)
+    N = [Network(source[i],sink[i],neighbours_network[i],residual_network[i]) for i in range(number_nodes)]
+    Queue = [[i for i in range(number_nodes) if N[i].excess > 0]]
+    for i in range(limit):
+        Queue.append([])
+    if Queue:
+        current_neighbour = 0
+        node = Queue[0][0]
+        while Queue:
+            node, current_neighbour, Queue = PushRelabelMain(node,current_neighbour, Queue)  
+    return
+
+PushRelabel(limit,number_nodes)
+#Add your own code to see the results. Will be updated soon to handles matplotlib
