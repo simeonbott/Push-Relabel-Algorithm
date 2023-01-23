@@ -132,4 +132,9 @@ def PushRelabel(limit,number_nodes):
 
 number_nodes = max(max(s),max(t)) + 1
 PushRelabel(limit,number_nodes)
-
+ob = [N[i].label for i in range(1029)]
+if max(ob) > limit:
+    print("false")
+else:
+    print("true")
+print(ob)
